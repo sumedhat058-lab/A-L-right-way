@@ -7,45 +7,33 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
         body { background-color: #f4f7f6; color: #333; }
-        
         .header { background: linear-gradient(135deg, #0d47a1, #1976d2); color: white; padding: 30px 15px; text-align: center; }
         .header h1 { font-size: 26px; margin-bottom: 8px; }
         .header p { font-size: 13px; opacity: 0.9; margin-bottom: 18px; }
-        
         .search-box { width: 100%; max-width: 500px; padding: 12px 20px; border: none; border-radius: 25px; font-size: 15px; outline: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        
         .container { max-width: 800px; margin: 25px auto; padding: 0 15px; }
         .section-title { font-size: 20px; margin-bottom: 20px; color: #1a237e; border-bottom: 2px solid #1976d2; padding-bottom: 5px; display: inline-block; }
-        
         .subject-card { background: white; border-radius: 10px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
         .sub-code { font-size: 12px; color: #1976d2; font-weight: bold; text-transform: uppercase; }
         .sub-title { font-size: 17px; font-weight: 600; color: #222; margin: 5px 0 15px 0; }
-        
         .resource-section { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; border-top: 1px solid #eee; padding-top: 12px; }
-        .resource-box h4 { font-size: 14px; color: #555; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-        
+        .resource-box h4 { font-size: 14px; color: #555; margin-bottom: 8px; }
         .medium-links { display: flex; gap: 6px; flex-wrap: wrap; }
-        .medium-btn { text-decoration: none; font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #e3f2fd; color: #0d47a1; font-weight: 500; transition: 0.2s; }
+        .medium-btn { text-decoration: none; font-size: 12px; padding: 6px 10px; border-radius: 4px; background-color: #e3f2fd; color: #0d47a1; font-weight: 500; cursor: pointer; border: none; }
         .medium-btn:hover { background-color: #1976d2; color: white; }
-
-        @media (max-width: 600px) {
-            .resource-section { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 600px) { .resource-section { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-
     <div class="header">
         <h1>📚 A/L Help</h1>
         <p>Past Papers & Short Notes for All A/L Subjects</p>
         <input type="text" id="searchInput" class="search-box" placeholder="විෂය නම හෝ අංකය සොයන්න (Search Subject)..." onkeyup="filterSubjects()">
     </div>
-
     <div class="container">
         <h2 class="section-title">📚 සියලුම විෂයන් (All 88 Subjects)</h2>
         <div id="subjectList"></div>
     </div>
-
     <script>
         const subjects = [
             { id: "01", name: "Physics / භෞතික විද්‍යාව" },
@@ -113,10 +101,13 @@
             { id: "88", name: "Korean / කොරියන්" }
         ];
 
+        function openResource(type, medium, subject) {
+            alert(subject + " - " + type + " (" + medium + ") තවම එකතු කර නොමැත.");
+        }
+
         function displaySubjects(data) {
             const listContainer = document.getElementById('subjectList');
             listContainer.innerHTML = '';
-            
             data.forEach(sub => {
                 const card = document.createElement('div');
                 card.className = 'subject-card';
@@ -127,17 +118,17 @@
                         <div class="resource-box">
                             <h4>📄 Past Papers</h4>
                             <div class="medium-links">
-                                <a href="papers/${sub.id}_sin.html" class="medium-btn">Sinhala</a>
-                                <a href="papers/${sub.id}_tam.html" class="medium-btn">Tamil</a>
-                                <a href="papers/${sub.id}_eng.html" class="medium-btn">English</a>
+                                <button onclick="openResource('Past Paper', 'Sinhala', '${sub.name}')" class="medium-btn">Sinhala</button>
+                                <button onclick="openResource('Past Paper', 'Tamil', '${sub.name}')" class="medium-btn">Tamil</button>
+                                <button onclick="openResource('Past Paper', 'English', '${sub.name}')" class="medium-btn">English</button>
                             </div>
                         </div>
                         <div class="resource-box">
                             <h4>📖 Short Notes</h4>
                             <div class="medium-links">
-                                <a href="notes/${sub.id}_sin.html" class="medium-btn">Sinhala</a>
-                                <a href="notes/${sub.id}_tam.html" class="medium-btn">Tamil</a>
-                                <a href="notes/${sub.id}_eng.html" class="medium-btn">English</a>
+                                <button onclick="openResource('Short Note', 'Sinhala', '${sub.name}')" class="medium-btn">Sinhala</button>
+                                <button onclick="openResource('Short Note', 'Tamil', '${sub.name}')" class="medium-btn">Tamil</button>
+                                <button onclick="openResource('Short Note', 'English', '${sub.name}')" class="medium-btn">English</button>
                             </div>
                         </div>
                     </div>
