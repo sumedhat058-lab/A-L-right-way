@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/L Help</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f7f6; color: #333; }
+        
+        .header { background: linear-gradient(135deg, #0d47a1, #1976d2); color: white; padding: 30px 15px; text-align: center; }
+        .header h1 { font-size: 26px; margin-bottom: 8px; }
+        .header p { font-size: 13px; opacity: 0.9; margin-bottom: 18px; }
+        
+        .search-box { width: 100%; max-width: 500px; padding: 12px 20px; border: none; border-radius: 25px; font-size: 15px; outline: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        
+        .container { max-width: 800px; margin: 25px auto; padding: 0 15px; }
+        .section-title { font-size: 20px; margin-bottom: 20px; color: #1a237e; border-bottom: 2px solid #1976d2; padding-bottom: 5px; display: inline-block; }
+        
+        .subject-card { background: white; border-radius: 10px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .sub-code { font-size: 12px; color: #1976d2; font-weight: bold; text-transform: uppercase; }
+        .sub-title { font-size: 17px; font-weight: 600; color: #222; margin: 5px 0 15px 0; }
+        
+        .resource-section { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; border-top: 1px solid #eee; padding-top: 12px; }
+        .resource-box h4 { font-size: 14px; color: #555; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+        
+        .medium-links { display: flex; gap: 6px; flex-wrap: wrap; }
+        .medium-btn { text-decoration: none; font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #e3f2fd; color: #0d47a1; font-weight: 500; transition: 0.2s; }
+        .medium-btn:hover { background-color: #1976d2; color: white; }
+
+        @media (max-width: 600px) {
+            .resource-section { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📚 A/L Help</h1>
+        <p>Past Papers & Short Notes for All A/L Subjects</p>
+        <input type="text" id="searchInput" class="search-box" placeholder="විෂය නම හෝ අංකය සොයන්න (Search Subject)..." onkeyup="filterSubjects()">
+    </div>
+
+    <div class="container">
+        <h2 class="section-title">📚 සියලුම විෂයන් (All 88 Subjects)</h2>
+        <div id="subjectList"></div>
+    </div>
+
+    <script>
+        const subjects = [
+            { id: "01", name: "Physics / භෞතික විද්‍යාව" },
+            { id: "02", name: "Chemistry / රසායන විද්‍යාව" },
+            { id: "07", name: "Mathematics / ගණිතය" },
+            { id: "08", name: "Agricultural Science / කෘෂි විද්‍යාව" },
+            { id: "09", name: "Biology / ජීව විද්‍යාව" },
+            { id: "10", name: "Combined Mathematics / සංයුක්ත ගණිතය" },
+            { id: "11", name: "Higher Mathematics / උසස් ගණිතය" },
+            { id: "12", name: "Common General Test / සාමාන්‍ය පොදු පරීක්ෂණය" },
+            { id: "13", name: "General English / සාමාන්‍ය ඉංග්‍රීසි" },
+            { id: "14", name: "Civil Technology / සිවිල් තාක්ෂණවේදය" },
+            { id: "15", name: "Mechanical Technology / යාන්ත්‍රික තාක්ෂණවේදය" },
+            { id: "16", name: "Electrical, Electronic & Information Technology" },
+            { id: "17", name: "Food Technology / ආහාර තාක්ෂණවේදය" },
+            { id: "18", name: "Agro Technology / කෘෂි තාක්ෂණවේදය" },
+            { id: "19", name: "Bio-Resource Technology / ජෛව සම්පත් තාක්ෂණවේදය" },
+            { id: "20", name: "Information & Communication Technology (ICT)" },
+            { id: "21", name: "Economics / ආර්ථික විද්‍යාව" },
+            { id: "22", name: "Geography / භූගෝල විද්‍යාව" },
+            { id: "23", name: "Political Science / දේශපාලන විද්‍යාව" },
+            { id: "24", name: "Logic & Scientific Method / තර්කශාස්ත්‍රය" },
+            { id: "25.A", name: "History of Sri Lanka & India / ලංකා සහ ඉන්දියානු ඉතිහාසය" },
+            { id: "25.B", name: "History of Sri Lanka & Europe / ලංකා සහ යුරෝපා ඉතිහාසය" },
+            { id: "25.C", name: "History of Sri Lanka & Modern World" },
+            { id: "28", name: "Home Economics / ගෘහ ආර්ථික විද්‍යාව" },
+            { id: "29", name: "Communication & Media Studies / ජනමාධ්‍ය" },
+            { id: "31", name: "Business Statistics / ව්‍යාපාර සංඛ්‍යානය" },
+            { id: "32", name: "Accounting / ගිණුම්කරණය" },
+            { id: "33", name: "Business Studies / ව්‍යාපාර අධ්‍යයනය" },
+            { id: "41", name: "Buddhism / බුද්ධ ධර්මය" },
+            { id: "42", name: "Hinduism / හින්දු ධර්මය" },
+            { id: "43", name: "Christianity / කතෝලික ධර්මය" },
+            { id: "44", name: "Islam / ඉස්ලාම් ධර්මය" },
+            { id: "45", name: "Buddhist Civilization / බෞද්ධ ශිෂ්ටාචාරය" },
+            { id: "46", name: "Hindu Civilization / හින්දු ශිෂ්ටාචාරය" },
+            { id: "47", name: "Islam Civilization / ඉස්ලාම් ශිෂ්ටාචාරය" },
+            { id: "48", name: "Greek & Roman Civilization" },
+            { id: "49", name: "Christian Civilization" },
+            { id: "51", name: "Art / චිත්‍ර කලා" },
+            { id: "52", name: "Dancing (Indigenous) / දේශීය නර්තනය" },
+            { id: "53", name: "Dancing (Bharatha) / භරත නර්තනය" },
+            { id: "54", name: "Oriental Music / පෙරදිග සංගීතය" },
+            { id: "55", name: "Carnatic Music / කර්නාටක සංගීතය" },
+            { id: "56", name: "Western Music / අපරදිග සංගීතය" },
+            { id: "57", name: "Drama & Theatre (Sinhala) / නාට්‍ය හා රංගකලාව" },
+            { id: "58", name: "Drama & Theatre (Tamil)" },
+            { id: "59", name: "Drama & Theatre (English)" },
+            { id: "65", name: "Engineering Technology / ඉංජිනේරු තාක්ෂණවේදය" },
+            { id: "66", name: "Bio Systems Technology / ජෛව පද්ධති තාක්ෂණවේදය" },
+            { id: "67", name: "Science for Technology / තාක්ෂණවේදය සඳහා විද්‍යාව" },
+            { id: "71", name: "Sinhala / සිංහල" },
+            { id: "72", name: "Tamil / දෙමළ" },
+            { id: "73", name: "English / ඉංග්‍රීසි" },
+            { id: "74", name: "Pali / පාලි" },
+            { id: "75", name: "Sanskrit / සංස්කෘත" },
+            { id: "78", name: "Arabic / අරාබි" },
+            { id: "79", name: "Malay / මාලේ" },
+            { id: "81", name: "French / ප්‍රංශ" },
+            { id: "82", name: "German / ජර්මන්" },
+            { id: "83", name: "Russian / රුසියන්" },
+            { id: "84", name: "Hindi / හින්දි" },
+            { id: "86", name: "Chinese / චීන" },
+            { id: "87", name: "Japanese / ජපන්" },
+            { id: "88", name: "Korean / කොරියන්" }
+        ];
+
+        function displaySubjects(data) {
+            const listContainer = document.getElementById('subjectList');
+            listContainer.innerHTML = '';
+            
+            data.forEach(sub => {
+                const card = document.createElement('div');
+                card.className = 'subject-card';
+                card.innerHTML = `
+                    <div class="sub-code">Subject ${sub.id}</div>
+                    <div class="sub-title">${sub.name}</div>
+                    <div class="resource-section">
+                        <div class="resource-box">
+                            <h4>📄 Past Papers</h4>
+                            <div class="medium-links">
+                                <a href="papers/${sub.id}_sin.html" class="medium-btn">Sinhala</a>
+                                <a href="papers/${sub.id}_tam.html" class="medium-btn">Tamil</a>
+                                <a href="papers/${sub.id}_eng.html" class="medium-btn">English</a>
+                            </div>
+                        </div>
+                        <div class="resource-box">
+                            <h4>📖 Short Notes</h4>
+                            <div class="medium-links">
+                                <a href="notes/${sub.id}_sin.html" class="medium-btn">Sinhala</a>
+                                <a href="notes/${sub.id}_tam.html" class="medium-btn">Tamil</a>
+                                <a href="notes/${sub.id}_eng.html" class="medium-btn">English</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function filterSubjects() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = subjects.filter(sub => 
+                sub.name.toLowerCase().includes(query) || sub.id.toLowerCase().includes(query)
+            );
+            displaySubjects(filtered);
+        }
+
+        displaySubjects(subjects);
+    </script>
+</body>
+</html>
