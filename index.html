@@ -104,20 +104,37 @@
         const SHEET_ID = '1V5efZ47fyxNjEfKxl6s0_Yhe-wi2nBDxXRtbEa39iLw';
         let pdfData = [];
 
+        function parseCSVLine(text) {
+            let result = [];
+            let entry = '';
+            let inQuotes = false;
+            for (let c of text) {
+                if (c === '"') {
+                    inQuotes = !inQuotes;
+                } else if (c === ',' && !inQuotes) {
+                    result.push(entry.trim().replace(/^"|"$/g, ''));
+                    entry = '';
+                } else {
+                    entry += c;
+                }
+            }
+            result.push(entry.trim().replace(/^"|"$/g, ''));
+            return result;
+        }
+
         async function fetchLinks() {
             try {
-                const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`);
+                const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`);
                 const csvText = await res.text();
                 
-                const lines = csvText.split('\n');
+                const lines = csvText.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length < 2) return;
 
-                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
                 
                 pdfData = [];
                 for (let i = 1; i < lines.length; i++) {
-                    if (!lines[i].trim()) continue;
-                    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                    const values = parseCSVLine(lines[i]);
                     let row = {};
                     headers.forEach((h, idx) => {
                         row[h] = values[idx] || '';
@@ -130,21 +147,20 @@
         }
 
         function openPDF(subId, type, medium) {
+            const cleanTargetId = String(subId).trim().replace(/^0+/, '');
+            const targetType = type.toLowerCase().trim();
+            const targetMedium = medium.toLowerCase().trim();
+
             const match = pdfData.find(item => {
-                const sheetSubId = String(item.SubjectID || '').trim().replace(/^0+/, '');
-                const targetSubId = String(subId).trim().replace(/^0+/, '');
+                const sheetSubId = String(item.subjectid || item.subject || '').trim().replace(/^0+/, '');
+                const sheetType = String(item.type || '').toLowerCase().trim();
+                const sheetMedium = String(item.medium || '').toLowerCase().trim();
 
-                const sheetType = String(item.Type || '').toLowerCase().trim();
-                const targetType = type.toLowerCase().trim();
-
-                const sheetMedium = String(item.Medium || '').toLowerCase().trim();
-                const targetMedium = medium.toLowerCase().trim();
-
-                return sheetSubId === targetSubId && sheetType === targetType && sheetMedium === targetMedium;
+                return sheetSubId === cleanTargetId && sheetType === targetType && sheetMedium === targetMedium;
             });
 
-            if (match && match.Link) {
-                window.open(match.Link, '_blank');
+            if (match && match.link && match.link.startsWith('http')) {
+                window.open(match.link, '_blank');
             } else {
                 alert("මෙම පාඩමට අදාළ PDF එක තවම එකතු කර නොමැත.");
             }
