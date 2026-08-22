@@ -114,11 +114,18 @@
         }
 
         function openPDF(subId, type, medium) {
-            const match = pdfData.find(item => 
-                String(item.SubjectID).trim() === String(subId).trim() && 
-                String(item.Type).toLowerCase().trim() === type.toLowerCase().trim() && 
-                String(item.Medium).toLowerCase().trim() === medium.toLowerCase().trim()
-            );
+            const match = pdfData.find(item => {
+                const sheetSubId = String(item.SubjectID || item['Subject ID'] || '').trim().replace(/^0+/, '');
+                const targetSubId = String(subId).trim().replace(/^0+/, '');
+
+                const sheetType = String(item.Type || '').toLowerCase().trim();
+                const targetType = type.toLowerCase().trim();
+
+                const sheetMedium = String(item.Medium || '').toLowerCase().trim();
+                const targetMedium = medium.toLowerCase().trim();
+
+                return sheetSubId === targetSubId && sheetType === targetType && sheetMedium === targetMedium;
+            });
 
             if (match && match.Link) {
                 window.open(match.Link, '_blank');
