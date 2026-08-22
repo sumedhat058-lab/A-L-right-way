@@ -101,8 +101,30 @@
             { id: "88", name: "Korean / කොරියන්" }
         ];
 
-        function openResource(type, medium, subject) {
-            alert(subject + " - " + type + " (" + medium + ") තවම එකතු කර නොමැත.");
+        const SHEET_ID = '1V5efZ47fyxNjEfKxl6s0_Yhe-wi2nBDxXRtbEa39iLw';
+        let pdfData = [];
+
+        async function fetchLinks() {
+            try {
+                const res = await fetch(`https://opensheet.elk.sh/${SHEET_ID}/1`);
+                pdfData = await res.json();
+            } catch (e) {
+                console.error("Sheet loading error", e);
+            }
+        }
+
+        function openPDF(subId, type, medium) {
+            const match = pdfData.find(item => 
+                String(item.SubjectID).trim() === String(subId).trim() && 
+                String(item.Type).toLowerCase().trim() === type.toLowerCase().trim() && 
+                String(item.Medium).toLowerCase().trim() === medium.toLowerCase().trim()
+            );
+
+            if (match && match.Link) {
+                window.open(match.Link, '_blank');
+            } else {
+                alert("මෙම පාඩමට අදාළ PDF එක තවම එකතු කර නොමැත.");
+            }
         }
 
         function displaySubjects(data) {
@@ -118,17 +140,17 @@
                         <div class="resource-box">
                             <h4>📄 Past Papers</h4>
                             <div class="medium-links">
-                                <button onclick="openResource('Past Paper', 'Sinhala', '${sub.name}')" class="medium-btn">Sinhala</button>
-                                <button onclick="openResource('Past Paper', 'Tamil', '${sub.name}')" class="medium-btn">Tamil</button>
-                                <button onclick="openResource('Past Paper', 'English', '${sub.name}')" class="medium-btn">English</button>
+                                <button onclick="openPDF('${sub.id}', 'Paper', 'Sinhala')" class="medium-btn">Sinhala</button>
+                                <button onclick="openPDF('${sub.id}', 'Paper', 'Tamil')" class="medium-btn">Tamil</button>
+                                <button onclick="openPDF('${sub.id}', 'Paper', 'English')" class="medium-btn">English</button>
                             </div>
                         </div>
                         <div class="resource-box">
                             <h4>📖 Short Notes</h4>
                             <div class="medium-links">
-                                <button onclick="openResource('Short Note', 'Sinhala', '${sub.name}')" class="medium-btn">Sinhala</button>
-                                <button onclick="openResource('Short Note', 'Tamil', '${sub.name}')" class="medium-btn">Tamil</button>
-                                <button onclick="openResource('Short Note', 'English', '${sub.name}')" class="medium-btn">English</button>
+                                <button onclick="openPDF('${sub.id}', 'Note', 'Sinhala')" class="medium-btn">Sinhala</button>
+                                <button onclick="openPDF('${sub.id}', 'Note', 'Tamil')" class="medium-btn">Tamil</button>
+                                <button onclick="openPDF('${sub.id}', 'Note', 'English')" class="medium-btn">English</button>
                             </div>
                         </div>
                     </div>
@@ -145,7 +167,7 @@
             displaySubjects(filtered);
         }
 
-        displaySubjects(subjects);
+        fetchLinks().then(() => displaySubjects(subjects));
     </script>
 </body>
 </html>
