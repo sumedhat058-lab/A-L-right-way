@@ -106,16 +106,32 @@
 
         async function fetchLinks() {
             try {
-                const res = await fetch(`https://opensheet.elk.sh/${SHEET_ID}/1`);
-                pdfData = await res.json();
+                const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`);
+                const csvText = await res.text();
+                
+                const lines = csvText.split('\n');
+                if (lines.length < 2) return;
+
+                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                
+                pdfData = [];
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                    let row = {};
+                    headers.forEach((h, idx) => {
+                        row[h] = values[idx] || '';
+                    });
+                    pdfData.push(row);
+                }
             } catch (e) {
-                console.error("Sheet loading error", e);
+                console.error("CSV Fetch Error:", e);
             }
         }
 
         function openPDF(subId, type, medium) {
             const match = pdfData.find(item => {
-                const sheetSubId = String(item.SubjectID || item['Subject ID'] || '').trim().replace(/^0+/, '');
+                const sheetSubId = String(item.SubjectID || '').trim().replace(/^0+/, '');
                 const targetSubId = String(subId).trim().replace(/^0+/, '');
 
                 const sheetType = String(item.Type || '').toLowerCase().trim();
