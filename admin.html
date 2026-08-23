@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A/L Help - Admin Upload</title>
+    <title>GitHub Direct Upload Admin</title>
     <style>
         * { box-sizing: border-box; font-family: Arial, sans-serif; }
         body { background: #f4f7f6; padding: 20px; margin: 0; }
@@ -18,10 +18,13 @@
 </head>
 <body>
     <div class="form-card">
-        <h2>📄 Add New Paper / Note</h2>
+        <h2>📄 GitHub Direct Upload</h2>
         <form id="uploadForm">
-            <label>Subject ID (උදා: 74)</label>
-            <input type="text" id="subjectId" required placeholder="74">
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" required>
+
+            <label>Subject ID</label>
+            <input type="text" id="subjectId" placeholder="74" required>
 
             <label>Type</label>
             <select id="type">
@@ -33,7 +36,6 @@
             <select id="medium">
                 <option value="Sinhala">Sinhala</option>
                 <option value="English">English</option>
-                <option value="Tamil">Tamil</option>
             </select>
 
             <label>Year</label>
@@ -42,53 +44,64 @@
             <label>PDF File</label>
             <input type="file" id="pdfFile" accept="application/pdf" required>
 
-            <button type="submit" id="subBtn">Upload Document</button>
+            <button type="submit" id="subBtn">Upload to GitHub</button>
         </form>
         <div id="status"></div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUHoyQmhtjEl-2BWLNhHct70IaINMoq6zsGZogUwS7IApB665f_XoNXWp5cGakheU/exec'; 
+        const USERNAME = 'sumedhat058-lab';
+        const REPO = 'A-L-right-way';
 
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('subBtn');
             const status = document.getElementById('status');
-            
+            const token = document.getElementById('ghToken').value.trim();
+            const fileInput = document.getElementById('pdfFile').files[0];
+
             btn.disabled = true;
             status.style.color = 'blue';
-            status.innerText = 'Uploading... Please wait!';
+            status.innerText = 'Uploading directly to GitHub...';
 
-            const fileInput = document.getElementById('pdfFile').files[0];
+            const subjectId = document.getElementById('subjectId').value;
+            const type = document.getElementById('type').value;
+            const medium = document.getElementById('medium').value;
+            const year = document.getElementById('year').value;
+
+            const cleanFileName = fileInput.name.replace(/\s+/g, '_');
+            const filePath = `uploads/${subjectId}_${type}_${medium}_${year}_${cleanFileName}`;
+
             const reader = new FileReader();
-
             reader.onload = async function() {
-                const payload = {
-                    subjectId: document.getElementById('subjectId').value,
-                    type: document.getElementById('type').value,
-                    medium: document.getElementById('medium').value,
-                    year: document.getElementById('year').value,
-                    fileName: fileInput.name,
-                    fileData: reader.result
-                };
+                const base64Content = reader.result.split(',')[1];
+                const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${filePath}`;
 
                 try {
-                    const res = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(payload)
+                    const response = await fetch(apiUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: `Add ${type} - ${subjectId} (${year})`,
+                            content: base64Content
+                        })
                     });
-                    const data = await res.json();
-                    if(data.status === 'success') {
+
+                    if (response.ok) {
                         status.style.color = 'green';
-                        status.innerText = 'Successfully Uploaded!';
+                        status.innerText = 'Uploaded Successfully to GitHub!';
                         document.getElementById('uploadForm').reset();
                     } else {
+                        const errData = await response.json();
                         status.style.color = 'red';
-                        status.innerText = 'Upload Failed! Check script permissions.';
+                        status.innerText = 'Failed: ' + (errData.message || 'Check Token');
                     }
-                } catch(err) {
+                } catch (err) {
                     status.style.color = 'red';
-                    status.innerText = 'Error occurred during upload!';
+                    status.innerText = 'Upload Error occurred!';
                 }
                 btn.disabled = false;
             };
@@ -98,6 +111,3 @@
     </script>
 </body>
 </html>
-
-
-
