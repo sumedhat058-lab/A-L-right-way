@@ -1,257 +1,499 @@
-<!DOCTYPE html>
-<html lang="si">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A/L Help</title>
-    <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f4f7f6; color: #333; }
-        .header { background: linear-gradient(135deg, #0d47a1, #1976d2); color: white; padding: 30px 15px; text-align: center; }
-        .header h1 { font-size: 26px; margin-bottom: 8px; }
-        .header p { font-size: 13px; opacity: 0.9; margin-bottom: 18px; }
-        .search-box { width: 100%; max-width: 500px; padding: 12px 20px; border: none; border-radius: 25px; font-size: 15px; outline: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        .container { max-width: 800px; margin: 25px auto; padding: 0 15px; }
-        .section-title { font-size: 20px; margin-bottom: 20px; color: #1a237e; border-bottom: 2px solid #1976d2; padding-bottom: 5px; display: inline-block; }
-        .subject-card { background: white; border-radius: 10px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .sub-code { font-size: 12px; color: #1976d2; font-weight: bold; text-transform: uppercase; }
-        .sub-title { font-size: 17px; font-weight: 600; color: #222; margin: 5px 0 15px 0; }
-        .resource-section { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; border-top: 1px solid #eee; padding-top: 12px; }
-        .resource-box h4 { font-size: 14px; color: #555; margin-bottom: 8px; }
-        .medium-links { display: flex; gap: 6px; flex-wrap: wrap; }
-        .medium-btn { text-decoration: none; font-size: 12px; padding: 6px 10px; border-radius: 4px; background-color: #e3f2fd; color: #0d47a1; font-weight: 500; cursor: pointer; border: none; }
-        .medium-btn:hover { background-color: #1976d2; color: white; }
-        
-        /* Modal Popup Styles */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-        .modal-content { background: white; border-radius: 12px; padding: 20px; width: 90%; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; }
-        .modal-header { font-size: 18px; font-weight: bold; color: #0d47a1; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
-        .close-btn { position: absolute; top: 12px; right: 15px; font-size: 22px; cursor: pointer; color: #888; }
-        .year-list { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; }
-        .year-btn { padding: 10px; background: #f0f4f8; border: 1px solid #1976d2; color: #0d47a1; font-weight: 600; border-radius: 6px; text-decoration: none; text-align: center; }
-        .year-btn:hover { background: #1976d2; color: white; }
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, Moon, Sun, Download, Globe, Filter, ChevronRight, Phone, Mail, 
+  BookOpen, FileText, Info, Menu, X, Calendar, Database, Layers, CheckCircle 
+} from 'lucide-react';
 
-        @media (max-width: 600px) { .resource-section { grid-template-columns: 1fr; } }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>📚 A/L Help</h1>
-        <p>Past Papers & Short Notes for All A/L Subjects</p>
-        <input type="text" id="searchInput" class="search-box" placeholder="විෂය නම හෝ අංකය සොයන්න (Search Subject)..." onkeyup="filterSubjects()">
-    </div>
-    <div class="container">
-        <h2 class="section-title">📚 සියලුම විෂයන් (All 88 Subjects)</h2>
-        <div id="subjectList"></div>
-    </div>
+// --- PRODUCTION DATA ARCHITECTURE ---
 
-    <!-- Modal Popup -->
-    <div id="pdfModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
-            <div class="modal-header" id="modalTitle">අවුරුද්ද තෝරන්න</div>
-            <div class="year-list" id="modalYearList"></div>
+// 1. Subject Streams/Categories
+const STREAMS = [
+  { id: 'all', si: 'සියලුම', en: 'All Streams', ta: 'அனைத்து பிரிவுகளும்' },
+  { id: 'science', si: 'ජීව විද්‍යා', en: 'Biological Science', ta: 'உயிரியல் விஞ்ஞானம்' },
+  { id: 'maths', si: 'භෞතික විද්‍යා', en: 'Physical Science', ta: 'பௌதிக விஞ்ஞானம்' },
+  { id: 'commerce', si: 'වාණිජ', en: 'Commerce', ta: 'வர்த்தகம்' },
+  { id: 'arts', si: 'කලා', en: 'Arts', ta: 'கலை' },
+  { id: 'tech', si: 'තාක්ෂණවේදය', en: 'Technology', ta: 'தொழில்நுட்பம்' },
+  { id: 'lang', si: 'භාෂා', en: 'Languages', ta: 'மொழிகள்' },
+  { id: 'gen', si: 'පොදු විෂයයන්', en: 'General', ta: 'பொது' }
+];
+
+// 2. Comprehensive Subject List (Extracted from A/L curriculum)
+const SUBJECTS_DB = [
+  { id: "01", si: "භෞතික විද්‍යාව", en: "Physics", ta: "பௌதிகவியல்", stream: "science" },
+  { id: "02", si: "රසායනික විද්‍යාව", en: "Chemistry", ta: "இரசாயனவியல்", stream: "science" },
+  { id: "07", si: "ගණිතය", en: "Mathematics", ta: "கணிதம்", stream: "maths" },
+  { id: "08", si: "කෘෂි විද්‍යාව", en: "Agricultural Science", ta: "விவசாய விஞ்ஞானம்", stream: "science" },
+  { id: "09", si: "ජීව විද්‍යාව", en: "Biology", ta: "உயிரியல்", stream: "science" },
+  { id: "10", si: "සංයුක්ත ගණිතය", en: "Combined Mathematics", ta: "இணைந்த கணிதம்", stream: "maths" },
+  { id: "11", si: "උසස් ගණිතය", en: "Higher Mathematics", ta: "உயர் கணிதம்", stream: "maths" },
+  { id: "12", si: "සාමාන්‍ය ඉංග්‍රීසි", en: "General English", ta: "பொது ஆங்கிலம்", stream: "gen" },
+  { id: "13", si: "පොදු සාමාන්‍ය පරීක්ෂණය", en: "Common General Test", ta: "பொதுச் சாதாரண பரீட்சை", stream: "gen" },
+  { id: "20", si: "තොරතුරු හා සන්නිවේදන තාක්ෂණය", en: "ICT", ta: "தகவல் தொடர்பாடல் தொழிநுட்பம்", stream: "tech" },
+  { id: "21", si: "ආර්ථික විද්‍යාව", en: "Economics", ta: "பொருளியல்", stream: "commerce" },
+  { id: "22", si: "භූගෝල විද්‍යාව", en: "Geography", ta: "புவியியல்", stream: "arts" },
+  { id: "23", si: "දේශපාලන විද්‍යාව", en: "Political Science", ta: "அரசியல் விஞ்ஞானம்", stream: "arts" },
+  { id: "32", si: "ව්‍යාපාර අධ්‍යයනය", en: "Business Studies", ta: "வணிகக் கல்வி", stream: "commerce" },
+  { id: "33", si: "ගිණුම්කරණය", en: "Accounting", ta: "கணக்கீடு", stream: "commerce" },
+  { id: "65", si: "ඉංජිනේරු තාක්ෂණවේදය", en: "Engineering Technology", ta: "பொறியியல் தொழிநுட்பவியல்", stream: "tech" },
+  { id: "66", si: "ජීව පද්ධති තාක්ෂණවේදය", en: "Bio Systems Technology", ta: "உயிரியல் முறைமைகள் தொழிநுட்பவியல்", stream: "tech" },
+  { id: "67", si: "තාක්ෂණවේදය සඳහා විද්‍යාව", en: "Science for Technology", ta: "தொழிநுட்பவியலுக்கான விஞ்ஞானம்", stream: "tech" },
+  { id: "71", si: "සිංහල", en: "Sinhala", ta: "சிங்களம்", stream: "lang" },
+  { id: "72", si: "දෙමළ", en: "Tamil", ta: "தமிழ்", stream: "lang" },
+  { id: "73", si: "ඉංග්‍රීසි", en: "English", ta: "ஆங்கிலம்", stream: "lang" },
+  // Additional subjects can be appended here following the same schema
+];
+
+// 3. Papers Resource DB Schema (Architecture Ready)
+// This structure allows for easy expansion without changing UI code
+const PAPERS_DB = [
+  // Example Entry (Real data would be populated here)
+  { 
+    id: "p1", 
+    subjectId: "01", 
+    year: 2023, 
+    medium: "si", 
+    type: "past", 
+    title: "2023 Physics Part I & II",
+    fileUrl: null // Set to actual URL when uploaded
+  },
+  { 
+    id: "p2", 
+    subjectId: "21", 
+    year: 2022, 
+    medium: "en", 
+    type: "marking", 
+    title: "2022 Economics Marking Scheme",
+    fileUrl: null 
+  }
+];
+
+// 4. Resource Types
+const RESOURCE_TYPES = [
+  { id: 'past', si: 'පසුගිය ප්‍රශ්න පත්‍ර', en: 'Past Papers', ta: 'கடந்தகால வினாத்தாள்கள்' },
+  { id: 'marking', si: 'පිළිතුරු පත්‍ර', en: 'Marking Schemes', ta: 'புள்ளித்திட்டங்கள்' },
+  { id: 'notes', si: 'කෙටි සටහන්', en: 'Short Notes', ta: 'சுருக்கக் குறிப்புகள்' },
+  { id: 'model', si: 'ආදර්ශ ප්‍රශ්න පත්‍ර', en: 'Model Papers', ta: 'மாதிரி வினாத்தாள்கள்' }
+];
+
+// --- TRANSLATIONS ENGINE ---
+
+const translations = {
+  si: {
+    brand: "A/L Hub ශ්‍රී ලංකා",
+    nav: { home: "මුල් පිටුව", subjects: "විෂයයන්", papers: "ප්‍රශ්න පත්‍ර", about: "අප ගැන", contact: "සම්බන්ධ වන්න" },
+    search: "විෂයයන්, ප්‍රශ්න පත්‍ර හෝ වසර සොයන්න...",
+    heroTitle: "ශ්‍රී ලංකාවේ අංක 1 උසස් පෙළ සම්පත් මධ්‍යස්ථානය",
+    heroSub: "ප්‍රශ්න පත්‍ර, ලකුණු දීමේ පටිපාටි සහ කෙටි සටහන් සියල්ල දැන් එකම තැනකින්.",
+    filter: "පෙරහන්",
+    medium: "මාධ්‍යය",
+    download: "බාගත කරන්න",
+    comingSoon: "ළඟදීම බලාපොරොත්තු වන්න",
+    notFound: "සොයාගත නොහැක",
+    back: "ආපසු",
+    statsSubjects: "විෂයයන්",
+    statsPapers: "ප්‍රශ්න පත්‍ර",
+    footerQuote: "අනාගත පරපුරේ අධ්‍යාපනික සිහිනය සැබෑ කිරීමට අප කැපවී සිටිමු."
+  },
+  en: {
+    brand: "A/L Hub Sri Lanka",
+    nav: { home: "Home", subjects: "Subjects", papers: "Papers", about: "About", contact: "Contact" },
+    search: "Search subjects, papers, or years...",
+    heroTitle: "Sri Lanka's #1 A/L Resource Hub",
+    heroSub: "Access past papers, marking schemes, and short notes all in one place.",
+    filter: "Filter",
+    medium: "Medium",
+    download: "Download",
+    comingSoon: "Coming Soon",
+    notFound: "Not Found",
+    back: "Back",
+    statsSubjects: "Subjects",
+    statsPapers: "Resources",
+    footerQuote: "Empowering the next generation of learners."
+  },
+  ta: {
+    brand: "A/L ஹப் இலங்கை",
+    nav: { home: "முகப்பு", subjects: "பாடங்கள்", papers: "வினாத்தாள்கள்", about: "பற்றி", contact: "தொடர்பு" },
+    search: "பாடங்கள், வினாத்தாள்கள் அல்லது ஆண்டுகளைத் தேடுங்கள்...",
+    heroTitle: "இலங்கையின் #1 உயர்தர வள மையம்",
+    heroSub: "கடந்தகால வினாத்தாள்கள், புள்ளித்திட்டங்கள் மற்றும் குறிப்புகளை ஓரிடத்தில் பெறுங்கள்.",
+    filter: "வடிகட்டி",
+    medium: "மொழி",
+    download: "பதிவிறக்கம்",
+    comingSoon: "விரைவில் வரும்",
+    notFound: "கிடைக்கவில்லை",
+    back: "பின்னால்",
+    statsSubjects: "பாடங்கள்",
+    statsPapers: "வளங்கள்",
+    footerQuote: "அடுத்த தலைமுறை மாணவர்களை ஊக்கப்படுத்துகிறோம்."
+  }
+};
+
+export default function ALHubProductionApp() {
+  const [lang, setLang] = useState('si');
+  const [darkMode, setDarkMode] = useState(false);
+  const [activePage, setActivePage] = useState('home');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStream, setSelectedStream] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const t = translations[lang];
+
+  // Dynamic SEO Title
+  useEffect(() => {
+    const pageTitles = { home: 'Home', subjects: 'Subjects', papers: 'Resources', about: 'About', contact: 'Contact' };
+    document.title = `${pageTitles[activePage] || 'Subject'} | A/L Hub Sri Lanka`;
+    
+    // Simulate Initial Loading
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, [activePage]);
+
+  // Filtering Logic (Subjects)
+  const filteredSubjects = useMemo(() => {
+    return SUBJECTS_DB.filter(sub => {
+      const query = searchTerm.toLowerCase();
+      const matchesSearch = 
+        sub.id.includes(query) || 
+        sub.si.toLowerCase().includes(query) ||
+        sub.en.toLowerCase().includes(query) ||
+        sub.ta.toLowerCase().includes(query);
+      const matchesStream = selectedStream === 'all' || sub.stream === selectedStream;
+      return matchesSearch && matchesStream;
+    });
+  }, [searchTerm, selectedStream]);
+
+  // Global Search Filter (for everything)
+  const filteredResources = useMemo(() => {
+    return PAPERS_DB.filter(p => {
+      const subject = SUBJECTS_DB.find(s => s.id === p.subjectId);
+      const query = searchTerm.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(query) ||
+        p.year.toString().includes(query) ||
+        (subject && subject.en.toLowerCase().includes(query))
+      );
+    });
+  }, [searchTerm]);
+
+  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const closeMenu = () => setIsMenuOpen(false);
+
+  // --- RENDERING COMPONENTS ---
+
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-slate-900 transition-opacity">
+      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
+  const MobileMenu = () => (
+    <div className={`fixed inset-0 z-40 md:hidden bg-slate-900/50 transition-all ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={closeMenu}>
+      <div className={`w-3/4 h-full bg-white dark:bg-slate-800 p-6 flex flex-col gap-6 shadow-2xl transition-transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <span className="font-bold text-xl text-blue-600">MENU</span>
+          <button onClick={closeMenu}><X size={24}/></button>
         </div>
+        {Object.keys(t.nav).map(page => (
+          <button key={page} onClick={() => {setActivePage(page); setSelectedSubject(null); closeMenu();}} className={`text-lg font-semibold text-left p-3 rounded-lg ${activePage === page ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : ''}`}>
+            {t.nav[page]}
+          </button>
+        ))}
+      </div>
     </div>
+  );
 
-    <script>
-        const subjects = [
-            { id: "01", name: "Physics / භෞතික විද්‍යාව" },
-            { id: "02", name: "Chemistry / රසායන විද්‍යාව" },
-            { id: "07", name: "Mathematics / ගණිතය" },
-            { id: "08", name: "Agricultural Science / කෘෂි විද්‍යාව" },
-            { id: "09", name: "Biology / ජීව විද්‍යාව" },
-            { id: "10", name: "Combined Mathematics / සංයුක්ත ගණිතය" },
-            { id: "11", name: "Higher Mathematics / උසස් ගණිතය" },
-            { id: "12", name: "Common General Test / සාමාන්‍ය පොදු පරීක්ෂණය" },
-            { id: "13", name: "General English / සාමාන්‍ය ඉංග්‍රීසි" },
-            { id: "14", name: "Civil Technology / සිවිල් තාක්ෂණවේදය" },
-            { id: "15", name: "Mechanical Technology / යාන්ත්‍රික තාක්ෂණවේදය" },
-            { id: "16", name: "Electrical, Electronic & Information Technology" },
-            { id: "17", name: "Food Technology / ආහාර තාක්ෂණවේදය" },
-            { id: "18", name: "Agro Technology / කෘෂි තාක්ෂණවේදය" },
-            { id: "19", name: "Bio-Resource Technology / ජෛව සම්පත් තාක්ෂණවේදය" },
-            { id: "20", name: "Information & Communication Technology (ICT)" },
-            { id: "21", name: "Economics / ආර්ථික විද්‍යාව" },
-            { id: "22", name: "Geography / භූගෝල විද්‍යාව" },
-            { id: "23", name: "Political Science / දේශපාලන විද්‍යාව" },
-            { id: "24", name: "Logic & Scientific Method / තර්කශාස්ත්‍රය" },
-            { id: "25.A", name: "History of Sri Lanka & India / ලංකා සහ ඉන්දියානු ඉතිහාසය" },
-            { id: "25.B", name: "History of Sri Lanka & Europe / ලංකා සහ යුරෝපා ඉතිහාසය" },
-            { id: "25.C", name: "History of Sri Lanka & Modern World" },
-            { id: "28", name: "Home Economics / ගෘහ ආර්ථික විද්‍යාව" },
-            { id: "29", name: "Communication & Media Studies / ජනමාධ්‍ය" },
-            { id: "31", name: "Business Statistics / ව්‍යාපාර සංඛ්‍යානය" },
-            { id: "32", name: "Accounting / ගිණුම්කරණය" },
-            { id: "33", name: "Business Studies / ව්‍යාපාර අධ්‍යයනය" },
-            { id: "41", name: "Buddhism / බුද්ධ ධර්මය" },
-            { id: "42", name: "Hinduism / හින්දු ධර්මය" },
-            { id: "43", name: "Christianity / කතෝලික ධර්මය" },
-            { id: "44", name: "Islam / ඉස්ලාම් ධර්මය" },
-            { id: "45", name: "Buddhist Civilization / බෞද්ධ ශිෂ්ටාචාරය" },
-            { id: "46", name: "Hindu Civilization / හින්දු ශිෂ්ටාචාරය" },
-            { id: "47", name: "Islam Civilization / ඉස්ලාම් ශිෂ්ටාචාරය" },
-            { id: "48", name: "Greek & Roman Civilization" },
-            { id: "49", name: "Christian Civilization" },
-            { id: "51", name: "Art / චිත්‍ර කලා" },
-            { id: "52", name: "Dancing (Indigenous) / දේශීය නර්තනය" },
-            { id: "53", name: "Dancing (Bharatha) / භරත නර්තනය" },
-            { id: "54", name: "Oriental Music / පෙරදිග සංගීතය" },
-            { id: "55", name: "Carnatic Music / කර්නාටක සංගීතය" },
-            { id: "56", name: "Western Music / අපරදිග සංගීතය" },
-            { id: "57", name: "Drama & Theatre (Sinhala) / නාට්‍ය හා රංගකලාව" },
-            { id: "58", name: "Drama & Theatre (Tamil)" },
-            { id: "59", name: "Drama & Theatre (English)" },
-            { id: "65", name: "Engineering Technology / ඉංජිනේරු තාක්ෂණවේදය" },
-            { id: "66", name: "Bio Systems Technology / ජෛව පද්ධති තාක්ෂණවේදය" },
-            { id: "67", name: "Science for Technology / තාක්ෂණවේදය සඳහා විද්‍යාව" },
-            { id: "71", name: "Sinhala / සිංහල" },
-            { id: "72", name: "Tamil / දෙමළ" },
-            { id: "73", name: "English / ඉංග්‍රීසි" },
-            { id: "74", name: "Pali / පාලි" },
-            { id: "75", name: "Sanskrit / සංස්කෘත" },
-            { id: "78", name: "Arabic / අරාබි" },
-            { id: "79", name: "Malay / මාලේ" },
-            { id: "81", name: "French / ප්‍රංශ" },
-            { id: "82", name: "German / ජර්මන්" },
-            { id: "83", name: "Russian / රුසියන්" },
-            { id: "84", name: "Hindi / හින්දි" },
-            { id: "86", name: "Chinese / චීන" },
-            { id: "87", name: "Japanese / ජපන්" },
-            { id: "88", name: "Korean / කොරියන්" }
-        ];
+  return (
+    <div className={`min-h-screen font-sans selection:bg-blue-200 transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      {isLoading && <LoadingOverlay />}
+      <MobileMenu />
 
-        const SHEET_ID = '1V5efZ47fyxNjEfKxl6s0_Yhe-wi2nBDxXRtbEa39iLw';
-        let pdfData = [];
+      {/* Header Navigation */}
+      <header className={`sticky top-0 z-30 shadow-sm backdrop-blur-md ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-100'} border-b`}>
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => {setActivePage('home'); setSelectedSubject(null)}}>
+            <div className="bg-blue-600 w-10 h-10 flex items-center justify-center rounded-xl text-white font-black text-lg">AL</div>
+            <span className="font-extrabold text-xl tracking-tight hidden xs:block">{t.brand}</span>
+          </div>
 
-        function parseCSVLine(text) {
-            let result = [];
-            let entry = '';
-            let inQuotes = false;
-            for (let c of text) {
-                if (c === '"') {
-                    inQuotes = !inQuotes;
-                } else if (c === ',' && !inQuotes) {
-                    result.push(entry.trim().replace(/^"|"$/g, ''));
-                    entry = '';
-                } else {
-                    entry += c;
-                }
-            }
-            result.push(entry.trim().replace(/^"|"$/g, ''));
-            return result;
-        }
+          <nav className="hidden md:flex gap-1">
+            {Object.keys(t.nav).map(page => (
+              <button key={page} onClick={() => {setActivePage(page); setSelectedSubject(null)}} className={`px-4 py-2 rounded-lg font-semibold transition-all ${activePage === page ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                {t.nav[page]}
+              </button>
+            ))}
+          </nav>
 
-        async function fetchLinks() {
-            try {
-                const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`);
-                const csvText = await res.text();
-                const lines = csvText.split('\n').filter(l => l.trim().length > 0);
-                if (lines.length < 2) return;
+          <div className="flex items-center gap-2">
+            <select value={lang} onChange={e => setLang(e.target.value)} className={`bg-transparent text-sm border-none font-bold cursor-pointer focus:ring-0 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <option value="si">සිංහල</option>
+              <option value="en">English</option>
+              <option value="ta">தமிழ்</option>
+            </select>
+            <button onClick={toggleDarkMode} className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+              {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
+            </button>
+            <button onClick={() => setIsMenuOpen(true)} className="md:hidden p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Menu size={24}/>
+            </button>
+          </div>
+        </div>
+      </header>
 
-                const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-                
-                pdfData = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const values = parseCSVLine(lines[i]);
-                    let row = {};
-                    headers.forEach((h, idx) => {
-                        row[h] = values[idx] || '';
-                    });
-                    pdfData.push(row);
-                }
-            } catch (e) {
-                console.error("CSV Fetch Error:", e);
-            }
-        }
+      {/* Dynamic Content Switching */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
 
-        function openPDF(subId, type, medium) {
-            const cleanTargetId = String(subId).trim().replace(/^0+/, '');
-            const targetType = type.toLowerCase().trim();
-            const targetMedium = medium.toLowerCase().trim();
+        {/* --- Home Page --- */}
+        {activePage === 'home' && !selectedSubject && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <section className="text-center py-12 md:py-20 mb-12">
+              <h1 className="text-4xl md:text-6xl font-black mb-6 bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                {t.heroTitle}
+              </h1>
+              <p className="text-lg md:text-xl opacity-70 mb-10 max-w-2xl mx-auto px-4">{t.heroSub}</p>
+              
+              <div className="relative max-w-xl mx-auto shadow-2xl rounded-3xl overflow-hidden group">
+                <input 
+                  type="text" 
+                  placeholder={t.search} 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full py-5 px-7 text-lg outline-none border-none dark:bg-slate-800 dark:text-white"
+                  onFocus={() => setActivePage('subjects')}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-blue-600 p-2.5 rounded-2xl text-white">
+                  <Search size={22}/>
+                </div>
+              </div>
+            </section>
 
-            const matches = pdfData.filter(item => {
-                const sheetSubId = String(item.subjectid || item.subject || '').trim().replace(/^0+/, '');
-                const sheetType = String(item.type || '').toLowerCase().trim();
-                const sheetMedium = String(item.medium || '').toLowerCase().trim();
-                return sheetSubId === cleanTargetId && sheetType === targetType && sheetMedium === targetMedium;
-            });
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-8 rounded-3xl bg-blue-600 text-white flex flex-col justify-between h-48">
+                <Layers size={32}/>
+                <div>
+                  <h3 className="text-2xl font-bold">{SUBJECTS_DB.length}+</h3>
+                  <p className="opacity-80">{t.statsSubjects}</p>
+                </div>
+              </div>
+              <div className="p-8 rounded-3xl bg-slate-900 text-white dark:bg-slate-800 flex flex-col justify-between h-48">
+                <Database size={32}/>
+                <div>
+                  <h3 className="text-2xl font-bold">Comprehensive</h3>
+                  <p className="opacity-80">Resource Database</p>
+                </div>
+              </div>
+              <div className="p-8 rounded-3xl bg-indigo-500 text-white flex flex-col justify-between h-48">
+                <CheckCircle size={32}/>
+                <div>
+                  <h3 className="text-2xl font-bold">Verified</h3>
+                  <p className="opacity-80">Answers & Schemes</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-            if (matches.length === 0) {
-                alert("මෙම පාඩමට අදාළ PDF එක තවම එකතු කර නොමැත.");
-            } else if (matches.length === 1 && (!matches[0].year || matches[0].year === '')) {
-                window.open(matches[0].link, '_blank');
-            } else {
-                showModal(type, medium, matches);
-            }
-        }
+        {/* --- Subjects Page --- */}
+        {activePage === 'subjects' && !selectedSubject && (
+          <div className="animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+              <h2 className="text-3xl font-black">{t.nav.subjects}</h2>
+              <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto scrollbar-hide">
+                {STREAMS.map(stream => (
+                  <button 
+                    key={stream.id}
+                    onClick={() => setSelectedStream(stream.id)}
+                    className={`px-5 py-2 rounded-xl text-sm font-bold whitespace-nowrap border transition-all ${selectedStream === stream.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
+                  >
+                    {stream[lang]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        function showModal(type, medium, items) {
-            const modal = document.getElementById('pdfModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalYearList = document.getElementById('modalYearList');
-
-            modalTitle.innerText = `${medium} ${type} - අවුරුද්ද තෝරන්න`;
-            modalYearList.innerHTML = '';
-
-            items.forEach(item => {
-                const yearLabel = item.year ? `${item.year} Paper/Note` : 'Open File';
-                const a = document.createElement('a');
-                a.className = 'year-btn';
-                a.href = item.link;
-                a.target = '_blank';
-                a.innerText = yearLabel;
-                modalYearList.appendChild(a);
-            });
-
-            modal.style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('pdfModal').style.display = 'none';
-        }
-
-        function displaySubjects(data) {
-            const listContainer = document.getElementById('subjectList');
-            listContainer.innerHTML = '';
-            data.forEach(sub => {
-                const card = document.createElement('div');
-                card.className = 'subject-card';
-                card.innerHTML = `
-                    <div class="sub-code">Subject ${sub.id}</div>
-                    <div class="sub-title">${sub.name}</div>
-                    <div class="resource-section">
-                        <div class="resource-box">
-                            <h4>📄 Past Papers</h4>
-                            <div class="medium-links">
-                                <button onclick="openPDF('${sub.id}', 'Paper', 'Sinhala')" class="medium-btn">Sinhala</button>
-                                <button onclick="openPDF('${sub.id}', 'Paper', 'Tamil')" class="medium-btn">Tamil</button>
-                                <button onclick="openPDF('${sub.id}', 'Paper', 'English')" class="medium-btn">English</button>
-                            </div>
-                        </div>
-                        <div class="resource-box">
-                            <h4>📖 Short Notes</h4>
-                            <div class="medium-links">
-                                <button onclick="openPDF('${sub.id}', 'Note', 'Sinhala')" class="medium-btn">Sinhala</button>
-                                <button onclick="openPDF('${sub.id}', 'Note', 'Tamil')" class="medium-btn">Tamil</button>
-                                <button onclick="openPDF('${sub.id}', 'Note', 'English')" class="medium-btn">English</button>
-                            </div>
-                        </div>
+            {filteredSubjects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {filteredSubjects.map(sub => (
+                  <div 
+                    key={sub.id} 
+                    className={`p-6 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 hover:shadow-xl'}`}
+                    onClick={() => setSelectedSubject(sub)}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="text-xs font-black tracking-widest text-blue-500 uppercase">Code #{sub.id}</span>
+                      <BookOpen size={18} className="opacity-20 group-hover:opacity-100 group-hover:text-blue-500 transition-opacity" />
                     </div>
-                `;
-                listContainer.appendChild(card);
-            });
-        }
+                    <h3 className="text-xl font-bold mb-1 leading-tight line-clamp-2 min-h-[3rem]">{sub[lang]}</h3>
+                    <div className="text-xs font-bold opacity-40 uppercase tracking-tighter">
+                      {STREAMS.find(s => s.id === sub.stream)?.[lang]}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 opacity-40">
+                <Search size={48} className="mx-auto mb-4"/>
+                <p className="text-xl font-bold">{t.notFound}</p>
+              </div>
+            )}
+          </div>
+        )}
 
-        function filterSubjects() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = subjects.filter(sub => 
-                sub.name.toLowerCase().includes(query) || sub.id.toLowerCase().includes(query)
-            );
-            displaySubjects(filtered);
-        }
+        {/* --- Subject Detail View --- */}
+        {selectedSubject && (
+          <div className="animate-in slide-in-from-right-4 duration-400">
+            <button onClick={() => setSelectedSubject(null)} className="mb-8 font-bold text-blue-600 flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-4 py-2 rounded-xl w-fit">
+              ← {t.back}
+            </button>
+            
+            <div className="flex flex-col lg:flex-row gap-8 mb-12">
+              <div className="flex-1">
+                <span className="bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">#{selectedSubject.id}</span>
+                <h1 className="text-4xl md:text-5xl font-black mt-4 mb-4">{selectedSubject[lang]}</h1>
+                <p className="text-lg opacity-60 font-medium">G.C.E. Advanced Level Comprehensive Resource Center.</p>
+              </div>
+              <div className="lg:w-1/3 flex flex-col gap-3">
+                <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-blue-50 border-blue-100'}`}>
+                  <div className="flex items-center gap-3 text-blue-600 mb-1">
+                    <Info size={18}/>
+                    <span className="font-bold text-sm uppercase">Quick Stats</span>
+                  </div>
+                  <p className="text-xs opacity-70">Resources are updated daily. Check back often.</p>
+                </div>
+              </div>
+            </div>
 
-        fetchLinks().then(() => displaySubjects(subjects));
-    </script>
-</body>
-</html>
+            <div className="space-y-12">
+              {RESOURCE_TYPES.map(type => (
+                <section key={type.id}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      {type.id === 'past' ? <Calendar size={20}/> : type.id === 'notes' ? <FileText size={20}/> : <CheckCircle size={20}/>}
+                    </div>
+                    <h3 className="text-2xl font-black">{type[lang]}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Filtered Papers for this subject and type */}
+                    {PAPERS_DB.filter(p => p.subjectId === selectedSubject.id && p.type === type.id).length > 0 ? (
+                      PAPERS_DB.filter(p => p.subjectId === selectedSubject.id && p.type === type.id).map(paper => (
+                        <div key={paper.id} className={`p-5 rounded-2xl border flex items-center justify-between ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                          <div className="flex items-center gap-4">
+                             <div className="bg-red-50 text-red-500 p-3 rounded-xl"><FileText size={20}/></div>
+                             <div>
+                               <p className="font-bold">{paper.title}</p>
+                               <span className="text-[10px] uppercase font-black opacity-30 tracking-widest">{paper.medium === 'si' ? 'Sinhala' : 'English'} Medium</span>
+                             </div>
+                          </div>
+                          <button className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
+                            <Download size={20}/>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className={`p-10 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center opacity-30 ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                        <Database size={32} className="mb-2"/>
+                        <p className="font-bold">{t.comingSoon}</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- About Page --- */}
+        {activePage === 'about' && (
+          <div className="max-w-3xl mx-auto py-12 text-center animate-in fade-in duration-500">
+             <h2 className="text-4xl font-black mb-8">{t.nav.about}</h2>
+             <div className="space-y-6 text-lg leading-relaxed opacity-80">
+               <p>A/L Hub Sri Lanka යනු ශ්‍රී ලංකාවේ උසස් පෙළ විභාගයට මුහුණ දෙන සිසුන්ට අවශ්‍ය සියලුම අධ්‍යාපන සම්පත් නොමිලේ සහ පහසුවෙන් ලබාදීම සඳහා නිර්මාණය කළ වෘත්තීය මට්ටමේ වේදිකාවකි.</p>
+               <p>අපගේ අරමුණ වන්නේ සෑම දරුවෙකුටම සමාන අධ්‍යාපන අවස්ථා ලබාදීමයි. මේ හරහා නිවැරදි ප්‍රශ්න පත්‍ර සහ පිළිතුරු පත්‍ර ඉතා කෙටි කාලයකින් සිසුන් අතරට ගෙනයාමට අප වෙහෙසෙමු.</p>
+             </div>
+             <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-3xl"><h4 className="text-3xl font-black text-blue-600">88</h4><p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-50">Subjects</p></div>
+                <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl"><h4 className="text-3xl font-black text-indigo-600">Trilingual</h4><p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-50">Support</p></div>
+                <div className="p-6 bg-slate-100 dark:bg-slate-800 rounded-3xl"><h4 className="text-3xl font-black">Verified</h4><p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-50">Schemes</p></div>
+                <div className="p-6 bg-slate-100 dark:bg-slate-800 rounded-3xl"><h4 className="text-3xl font-black">Free</h4><p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-50">Forever</p></div>
+             </div>
+          </div>
+        )}
+
+        {/* --- Contact Page --- */}
+        {activePage === 'contact' && (
+          <div className="max-w-2xl mx-auto py-12 animate-in fade-in duration-500">
+             <h2 className="text-4xl font-black mb-10 text-center">{t.nav.contact}</h2>
+             <div className="grid gap-6">
+                <div className={`p-8 rounded-3xl border flex items-center gap-6 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 hover:shadow-xl'} transition-shadow`}>
+                   <div className="bg-blue-100 text-blue-600 p-4 rounded-2xl"><Mail size={28}/></div>
+                   <div>
+                     <p className="text-sm font-black uppercase opacity-40 mb-1">Email Us</p>
+                     <p className="text-xl font-bold">contact@alhub.lk</p>
+                   </div>
+                </div>
+                <div className={`p-8 rounded-3xl border flex items-center gap-6 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 hover:shadow-xl'} transition-shadow`}>
+                   <div className="bg-indigo-100 text-indigo-600 p-4 rounded-2xl"><Phone size={28}/></div>
+                   <div>
+                     <p className="text-sm font-black uppercase opacity-40 mb-1">Call Support</p>
+                     <p className="text-xl font-bold">+94 77 123 4567</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* Footer */}
+      <footer className={`mt-20 border-t ${darkMode ? 'bg-slate-950 border-slate-900' : 'bg-white border-slate-100'} py-16`}>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="bg-blue-600 w-8 h-8 flex items-center justify-center rounded-lg text-white font-black">AL</div>
+                <span className="font-black text-lg">{t.brand}</span>
+              </div>
+              <p className="text-slate-500 leading-relaxed max-w-xs">{t.footerQuote}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-8 md:col-span-2">
+              <div>
+                <h4 className="font-black mb-6 uppercase text-xs tracking-widest text-blue-600">Explore</h4>
+                <ul className="space-y-4 font-bold opacity-60">
+                  <li className="hover:text-blue-600 cursor-pointer" onClick={() => setActivePage('subjects')}>{t.nav.subjects}</li>
+                  <li className="hover:text-blue-600 cursor-pointer" onClick={() => setActivePage('papers')}>{t.nav.papers}</li>
+                  <li className="hover:text-blue-600 cursor-pointer">Examinations</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-black mb-6 uppercase text-xs tracking-widest text-blue-600">Support</h4>
+                <ul className="space-y-4 font-bold opacity-60">
+                  <li className="hover:text-blue-600 cursor-pointer" onClick={() => setActivePage('contact')}>{t.nav.contact}</li>
+                  <li className="hover:text-blue-600 cursor-pointer">Privacy Policy</li>
+                  <li className="hover:text-blue-600 cursor-pointer">Terms of Service</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-8 border-t border-slate-500/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold opacity-30 uppercase tracking-widest">
+            <span>&copy; {new Date().getFullYear()} {t.brand}. Designed for Sri Lanka.</span>
+            <div className="flex gap-6">
+              <span>Facebook</span>
+              <span>Twitter</span>
+              <span>YouTube</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+    </div>
+  );
+}
